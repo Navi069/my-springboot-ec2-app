@@ -25,11 +25,12 @@ jobs:
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "target/*.jar"
-          target: "/home/ec2-user/"
+            host: ${{ secrets.EC2_HOST }}
+            username: ${{ secrets.EC2_USERNAME }}
+            key: ${{ secrets.EC2_SSH_KEY }}
+            source: "target/hello-0.0.1-SNAPSHOT.jar"
+            target: "/home/ec2-user/"
+            overwrite: true
       - name: Restart app
         uses: appleboy/ssh-action@master
         with:
