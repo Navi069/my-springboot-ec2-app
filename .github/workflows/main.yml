@@ -13,6 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Show commit info
+        run: |
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "Commit: $GITHUB_SHA"
+          git log --oneline -1
+
+      - name: Show controller source
+        run: |
+          find src/main/java -name "*Controller.java"
+          sed -n '1,200p' src/main/java/com/testing/hello/HelloController.java
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -23,7 +34,14 @@ jobs:
         run: mvn clean package
 
       - name: Verify build output
-        run: ls -l target
+        run: |
+          ls -l target
+          sha256sum target/hello-0.0.1-SNAPSHOT.jar
+
+      - name: Check if new text exists inside jar
+        run: |
+          unzip -p target/hello-0.0.1-SNAPSHOT.jar BOOT-INF/classes/com/testing/hello/HelloController.class | strings | grep -i "Version" || true
+          unzip -p target/hello-0.0.1-SNAPSHOT.jar BOOT-INF/classes/com/testing/hello/HelloController.class | strings | grep -i "Hello" || true
 
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v1
@@ -35,7 +53,7 @@ jobs:
           target: "/home/ec2-user/"
           overwrite: true
 
-      - name: Restart app service
+      - name: Restart app
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -43,5 +61,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 2m
           script: |
-            sudo systemctl restart hello
-            sudo systemctl status hello --no-pager
+            pkill -f "hello-0.0.1-SNAPSHOT.jar" || true
+            nohup java -jar /home/ec2-user/hello-0.0.1-SNAPSHOT.jar > /home/ec2-user/app.log 2>&1 < /dev/null &
+            sleep 5
+            sha256sum /home/ec2-user/hello-0.0.1-SNAPSHOT.jar
+            curl http://localhost:8080/ || true
+            tail -n 50 /home/ec2-user/app.log || true
