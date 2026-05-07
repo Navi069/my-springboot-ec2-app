@@ -35,7 +35,7 @@ jobs:
           target: "/home/ec2-user/"
           overwrite: true
 
-      - name: Stop old app
+      - name: Restart app service
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -43,18 +43,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 2m
           script: |
-            pkill -f "hello-0.0.1-SNAPSHOT.jar" || true
-            rm -f /home/ec2-user/demo-0.0.1-SNAPSHOT.jar || true
-
-      - name: Start new app
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          command_timeout: 2m
-          script: |
-            cd /home/ec2-user
-            nohup java -jar /home/ec2-user/hello-0.0.1-SNAPSHOT.jar > /home/ec2-user/app.log 2>&1 < /dev/null &
-            sleep 5
-            tail -n 50 /home/ec2-user/app.log || true
+            sudo systemctl restart hello
+            sudo systemctl status hello --no-pager
